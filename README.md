@@ -61,17 +61,19 @@ Set `DEBUG = True` while tuning `MOTION_THRESHOLD` and `MIN_MOTION_AREA`.
 
 ```
 motion_detection_app/
-├── main.py              # Entry point and application controller
-├── camera.py            # Camera manager (sole owner of cv2.VideoCapture)
-├── preprocessing.py     # Grayscale conversion and smoothing
-├── motion_detector.py   # Frame-differencing motion detection
-├── renderer.py          # Draws motion status on the frame
-├── config.py            # Centralized configuration
-├── logger.py            # Logging setup
-└── tests/
-    ├── test_motion_detector.py
-    ├── test_preprocessing.py
-    └── test_camera.py
+    documents/
+    src/
+    ├── main.py              # Entry point and application controller
+    ├── camera.py            # Camera manager (sole owner of cv2.VideoCapture)
+    ├── preprocessing.py     # Grayscale conversion and smoothing
+    ├── motion_detector.py   # Frame-differencing motion detection
+    ├── renderer.py          # Draws motion status on the frame
+    ├── config.py            # Centralized configuration
+    ├── logger.py            # Logging setup
+    └── tests/
+        ├── test_motion_detector.py
+        ├── test_preprocessing.py
+        └── test_camera.py
 ```
 
 ## Testing

@@ -18,9 +18,20 @@ class Camera:
                 log.error("Camera unavailable (index %s)", config.CAMERA_INDEX)
                 self.release()
                 return False
-            self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.FRAME_WIDTH)
-            self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.FRAME_HEIGHT)
-            log.info("Camera initialized")
+            self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.CAPTURE_WIDTH)
+            self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAPTURE_HEIGHT)
+            self._capture.set(cv2.CAP_PROP_FPS, config.CAPTURE_FPS)
+
+            actual_w = int(self._capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+            actual_h = int(self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            actual_fps = float(self._capture.get(cv2.CAP_PROP_FPS))
+            log.info(
+                "Camera initialized: requested %dx%d @ %s FPS, negotiated %dx%d @ %.1f FPS",
+                config.CAPTURE_WIDTH, config.CAPTURE_HEIGHT, config.CAPTURE_FPS,
+                actual_w, actual_h, actual_fps,
+            )
+            if (actual_w, actual_h) != (config.CAPTURE_WIDTH, config.CAPTURE_HEIGHT):
+                log.warning("Camera resolution differs from the requested resolution")
             return True
         except Exception:
             log.exception("Camera unavailable")
