@@ -39,13 +39,27 @@ class Camera:
             return False
 
     def read(self):
-        """Return a frame, or None if the read failed."""
+        """Read and return a frame, or None if the read fails."""
+        log = get_logger()
+
         if not self.is_open():
             return None
-        ok, frame = self._capture.read()
-        if not ok:
+
+        try:
+            ok, frame = self._capture.read()
+
+            if not ok:
+                return None
+
+            return frame
+
+        except cv2.error:
+            log.exception("OpenCV camera read failure")
             return None
-        return frame
+
+        except Exception:
+            log.exception("Unexpected camera read failure")
+            return None
 
     def is_open(self) -> bool:
         return self._capture is not None and self._capture.isOpened()

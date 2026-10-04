@@ -33,69 +33,98 @@ def handle_camera_failure() -> None:
 def run_processing_loop(camera: Camera) -> None:
     log = get_logger()
     detector = MotionDetector()
-    
-    consecutive_failures = 0
-    reconnect_attempts = 0
-    last_failure_log = 0.0
+
     fps_frames = 0
     fps_window_start = time.monotonic()
 
-    while True:    ###
+    consecutive_failures = 0
+    reconnect_attempts = 0
+    last_failure_log = 0.0
+
+    while True:
         frame = camera.read()
+
         if frame is None:
             consecutive_failures += 1
             now = time.monotonic()
+
             if now - last_failure_log >= config.READ_FAILURE_LOG_INTERVAL_S:
-                log.warning("Frame read failure (%d consecutive)", consecutive_failures)
+                log.warning(
+                    "Frame read failure (%d consecutive)",
+                    consecutive_failures,
+                )
                 last_failure_log = now
 
             if consecutive_failures >= config.MAX_CONSECUTIVE_READ_FAILURES:
                 if reconnect_attempts >= config.MAX_RECONNECT_ATTEMPTS:
-                    log.error("Camera read failed %d times; shutting down", consecutive_failures)
+                    log.error(
+                        "Camera read failed %d times; shutting down",
+                        consecutive_failures,
+                    )
                     break
+
                 reconnect_attempts += 1
+
                 log.warning(
                     "Attempting camera reconnect (%d/%d)",
-                    reconnect_attempts, config.MAX_RECONNECT_ATTEMPTS,
+                    reconnect_attempts,
+                    config.MAX_RECONNECT_ATTEMPTS,
                 )
+
                 camera.release()
-                camera.open()
+
+                try:
+                    camera.open()
+                except Exception:
+                    log.exception("Camera reconnect raised an exception")
+                    camera.release()
+                    time.sleep(config.READ_RETRY_DELAY_S)
+                    continue
+
+                if not camera.is_open():
+                    log.warning("Camera reconnect failed")
+                    time.sleep(config.READ_RETRY_DELAY_S)
+                    continue
+
+                log.info("Camera reconnect successful")
                 consecutive_failures = 0
 
             if exit_requested():
                 break
+
             time.sleep(config.READ_RETRY_DELAY_S)
             continue
 
         consecutive_failures = 0
-        reconnect_attempts = 0
-
-        fps_frames += 1
-        elapsed = time.monotonic() - fps_window_start
-        if elapsed >= config.FPS_LOG_INTERVAL_S:
-            log.info(
-                "Delivered FPS: %.1f (requested %s)",
-                fps_frames / elapsed, config.CAPTURE_FPS,
-            )
-            fps_frames = 0
-            fps_window_start = time.monotonic()
         log.debug("Frame captured")
 
         if not is_valid_frame(frame):
             log.warning("Invalid frame")
+
             if exit_requested():
                 break
+
             continue
+
         t_start = time.perf_counter()
+
         processed = preprocess(frame)
+
         if processed is None:
             log.warning("Invalid frame (preprocessing rejected)")
+
             if exit_requested():
                 break
+
             continue
 
         result = detector.detect(processed)
-        log.debug("Processing time: %.2f ms", (time.perf_counter() - t_start) * 1000)
+
+        log.debug(
+            "Processing time: %.2f ms",
+            (time.perf_counter() - t_start) * 1000,
+        )
+
         output = render(frame, result)
 
         try:
@@ -103,6 +132,16 @@ def run_processing_loop(camera: Camera) -> None:
         except cv2.error:
             log.error("Display failure", exc_info=True)
             break
+
+        fps_frames += 1
+        elapsed = time.monotonic() - fps_window_start
+
+        if elapsed >= config.FPS_LOG_INTERVAL_S:
+            processing_fps = fps_frames / elapsed
+            log.info("Processing FPS: %.1f", processing_fps)
+
+            fps_frames = 0
+            fps_window_start = time.monotonic()
 
         if exit_requested():
             break

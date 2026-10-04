@@ -21,12 +21,7 @@ class MotionDetector:
 
     @staticmethod
     def _is_valid(frame) -> bool:
-        return(
-            isinstance(frame, np.ndarray)
-            and frame.size > 0
-            and frame.ndim == 2
-            and frame.dtype == np.uint8
-        )
+        return isinstance(frame, np.ndarray) and frame.size > 0 and frame.ndim == 2
 
     def detect(self, frame) -> MotionResult:
         log = get_logger()
